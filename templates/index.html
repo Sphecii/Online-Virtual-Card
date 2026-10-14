@@ -15,7 +15,6 @@
   <body>
     <a class="announcement" href="{{ url_for('register') }}">
       <span>Privacy is crucial</span>
-      <span class="announcement__arrow" aria-hidden="true">→</span>
     </a>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -52,7 +51,7 @@
             <a class="dropdown-feature" href="{{ url_for('virtual_cards') }}">
               <svg class="dropdown-feature__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <rect x="3.5" y="5.5" width="16" height="13" rx="2.5"></rect>
-                <path d="M3.5 9h12M15 14l2-2 2 2M17 12v5"></path>
+                <path d="M3.5 9h16"></path>
               </svg>
               <span>Single-Use Cards</span>
             </a>
@@ -115,7 +114,7 @@
             Create a virtual card in seconds. Stay in control.
           </p>
           <a class="button button--primary button--hero" href="{{ url_for('register') }}">
-            Get started for free <span aria-hidden="true">→</span>
+            Get started for free
           </a>
           <p class="hero__note">No monthly fee. No stress. Just smarter spending.</p>
         </div>
@@ -140,7 +139,7 @@
           </div>
           <div class="secure-badge"><span aria-hidden="true">✓</span> Your details stay yours</div>
           <div class="floating-label floating-label--left">
-            <span class="floating-label__icon" aria-hidden="true">↗</span>
+            <span class="floating-label__icon" aria-hidden="true">✓</span>
             <span><strong>You're in control</strong><small>Pause your card anytime</small></span>
           </div>
           <div class="floating-label floating-label--right">
@@ -178,7 +177,7 @@
         <h2>A little more privacy looks good on you.</h2>
         <p>Explore a simpler, more thoughtful way to pay online.</p>
         <a class="button button--primary" href="{{ url_for('register') }}">
-          Create your account <span aria-hidden="true">→</span>
+          Create your account
         </a>
         <p class="closing-cta__fine-print" id="pricing">Pricing and availability may vary.</p>
       </section>
@@ -196,7 +195,7 @@
           <span class="support-panel__icon" aria-hidden="true">?</span>
           <div><strong>How can we help?</strong><small>We'd love to hear from you.</small></div>
         </div>
-        <a href="mailto:support@aliascard.example">Email our support team <span aria-hidden="true">→</span></a>
+        <a href="mailto:support@aliascard.example">Email our support team</a>
       </div>
       <button
         class="support-button"

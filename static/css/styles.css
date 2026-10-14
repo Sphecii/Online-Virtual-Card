@@ -45,21 +45,11 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
   background: #09090a;
   color: #fff;
   font-size: 14px;
   font-weight: 600;
   letter-spacing: -0.01em;
-}
-
-.announcement__arrow {
-  font-size: 19px;
-  transition: transform 180ms ease;
-}
-
-.announcement:hover .announcement__arrow {
-  transform: translateX(4px);
 }
 
 .site-flash-list {

@@ -40,6 +40,16 @@ class AuthenticationTests(unittest.TestCase):
         self.assertIsNotNone(match)
         return match.group(1)
 
+    def assert_no_arrow_indicators(self, response):
+        html = response.get_data(as_text=True)
+        arrows = (
+            "→", "←", "↗", "↘", "↖", "↙", "↓", "↑", "➜", "➝", "⟶", "⟵", "⮕"
+        )
+        for arrow in arrows:
+            with self.subTest(arrow=arrow):
+                self.assertNotIn(arrow, html)
+        self.assertNotIn("profile-chevron", html)
+
     def register(self, email="person@example.com", password="secure-password-123"):
         token = self.csrf_token("/register")
         return self.client.post(
@@ -156,6 +166,7 @@ class AuthenticationTests(unittest.TestCase):
         self.assertIn(b"Recent activity", response.data)
         self.assertIn(b"Account security", response.data)
         self.assertIn(b"Card issuing isn", response.data)
+        self.assert_no_arrow_indicators(response)
 
     def test_successful_login_redirects_directly_to_dashboard(self):
         self.register()
@@ -217,6 +228,17 @@ class AuthenticationTests(unittest.TestCase):
         self.assertNotIn(b"Secure payments for you and your AI agents", response.data)
         self.assertIn(b"Privacy is crucial", response.data)
         self.assertNotIn(b">Pricing</a>", response.data)
+        self.assertEqual(response.data.count(b"nav-dropdown-toggle"), 3)
+        self.assertEqual(response.data.count(b'class="chevron"'), 3)
+        self.assertEqual(response.data.count(b'class="dropdown-panel'), 3)
+        self.assert_no_arrow_indicators(response)
+
+    def test_auth_pages_have_no_arrow_indicators(self):
+        for endpoint in ("/login", "/register"):
+            with self.subTest(endpoint=endpoint):
+                response = self.client.get(endpoint)
+                self.assertEqual(response.status_code, 200)
+                self.assert_no_arrow_indicators(response)
 
     def test_wallet_requires_login(self):
         response = self.client.get("/wallet")
@@ -234,6 +256,7 @@ class AuthenticationTests(unittest.TestCase):
         self.assertIn(b"Apple Pay", response.data)
         self.assertIn(b"Google Pay", response.data)
         self.assertIn(b"Credit or debit card", response.data)
+        self.assert_no_arrow_indicators(response)
         dashboard = self.client.get("/dashboard")
         self.assertIn(b'href="/wallet"', dashboard.data)
 
@@ -280,6 +303,7 @@ class AuthenticationTests(unittest.TestCase):
         self.assertIn(b"initEmbeddedCheckout", checkout_page.data)
         self.assertIn(b"pk_test_aliascard", checkout_page.data)
         self.assertIn(b"cs_test_aliascard_secret_test", checkout_page.data)
+        self.assert_no_arrow_indicators(checkout_page)
 
         wallet = self.client.get("/wallet")
         self.assertIn(b"ZAR 0.00", wallet.data)

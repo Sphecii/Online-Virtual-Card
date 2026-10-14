@@ -77,7 +77,6 @@
           <button class="sidebar-logout" type="submit">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M10 4H5.5A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20H10"></path>
-              <path d="M14 16l4-4-4-4m4 4H9"></path>
             </svg>
             Log out
           </button>
@@ -104,9 +103,6 @@
         <a class="profile-chip" href="#account">
           <span class="profile-avatar" aria-hidden="true">{{ user.email[0]|upper }}</span>
           <span class="profile-email">{{ user.email }}</span>
-          <svg class="profile-chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="m4 6 4 4 4-4"></path>
-          </svg>
         </a>
       </header>
 
@@ -116,7 +112,7 @@
           <h2 id="welcome-title">Welcome to your<br>more private wallet.</h2>
           <p>Manage your virtual cards and keep every online payment in your control.</p>
           <a class="welcome-link" href="#your-cards">
-            Explore your cards <span aria-hidden="true">↓</span>
+            Explore your cards
           </a>
         </div>
         <div class="welcome-art" aria-hidden="true">
@@ -197,7 +193,7 @@
               <span class="empty-card-art__spark">✳</span>
               <svg viewBox="0 0 64 64" fill="none">
                 <rect x="9" y="15" width="46" height="34" rx="7"></rect>
-                <path d="M10 25h44M18 37h10m14-4 6 6-6 6"></path>
+                <path d="M10 25h44M18 37h10"></path>
               </svg>
             </div>
             <h3>Your card space is ready.</h3>
@@ -230,7 +226,7 @@
             <span><strong>Password protected</strong><small>Your password is never stored as text</small></span>
             <span class="security-row__state">On</span>
           </div>
-          <a class="security-link" href="#account">Review account details <span aria-hidden="true">→</span></a>
+          <a class="security-link" href="#account">Review account details</a>
         </aside>
       </section>
 
@@ -257,7 +253,7 @@
           <span class="footer-avatar" aria-hidden="true">{{ user.email[0]|upper }}</span>
           <span class="footer-account"><strong>{{ user.email }}</strong><small>Your AliasCard account</small></span>
         </div>
-        <a href="{{ url_for('home') }}">AliasCard <span aria-hidden="true">↗</span></a>
+        <a href="{{ url_for('home') }}">AliasCard</a>
       </footer>
     </main>
   </body>

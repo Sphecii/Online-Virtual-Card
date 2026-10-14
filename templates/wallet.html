@@ -77,7 +77,6 @@
           <button class="sidebar-logout" type="submit">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M10 4H5.5A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20H10"></path>
-              <path d="M14 16l4-4-4-4m4 4H9"></path>
             </svg>
             Log out
           </button>
@@ -173,7 +172,7 @@
             <ul class="wallet-list">
               {% for top_up in top_ups %}
                 <li>
-                  <span class="wallet-list-icon" aria-hidden="true">↑</span>
+                  <span class="wallet-list-icon" aria-hidden="true">+</span>
                   <span class="wallet-list-detail">
                     <strong>Wallet top-up</strong>
                     <small>{{ top_up.created_at.strftime("%d %b %Y, %H:%M") }} · {{ top_up.status|capitalize }}</small>

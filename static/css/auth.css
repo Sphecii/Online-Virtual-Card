@@ -228,15 +228,6 @@ input {
   transform: scale(0.985);
 }
 
-.auth-submit span {
-  font-size: 18px;
-  transition: transform 160ms ease;
-}
-
-.auth-submit:hover span {
-  transform: translateX(3px);
-}
-
 .auth-submit--secondary {
   width: 100%;
   justify-content: center;

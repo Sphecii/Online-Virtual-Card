@@ -121,7 +121,6 @@ button {
 
 .sidebar-link svg,
 .sidebar-logout svg,
-.profile-chevron,
 .metric-icon svg,
 .empty-card-art svg,
 .security-shield svg,
@@ -296,12 +295,6 @@ button {
   white-space: nowrap;
 }
 
-.profile-chevron {
-  width: 14px;
-  height: 14px;
-  color: var(--dashboard-muted);
-}
-
 .welcome-banner {
   position: relative;
   min-height: 218px;
@@ -346,19 +339,9 @@ button {
 .welcome-link {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
   color: var(--dashboard-green);
   font-size: 11px;
   font-weight: 650;
-}
-
-.welcome-link span {
-  font-size: 15px;
-  transition: transform 160ms ease;
-}
-
-.welcome-link:hover span {
-  transform: translateY(3px);
 }
 
 .welcome-art {
@@ -755,10 +738,6 @@ button {
   color: var(--dashboard-green);
   font-size: 9px;
   font-weight: 580;
-}
-
-.security-link span {
-  font-size: 14px;
 }
 
 .activity-panel {
@@ -1453,11 +1432,6 @@ button {
   .profile-email {
     max-width: 115px;
     font-size: 9px;
-  }
-
-  .profile-chevron {
-    width: 12px;
-    height: 12px;
   }
 
   .welcome-banner {
