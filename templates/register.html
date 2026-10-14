@@ -1,0 +1,57 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Create account — AliasCard{% endblock %}
+
+{% block auth_content %}
+  <p class="auth-eyebrow">A better way to pay online</p>
+  <h1 id="auth-title">Create your account</h1>
+  <p class="auth-intro">Start with a more private, more secure way to pay.</p>
+
+  <form class="auth-form" method="post" action="{{ url_for('register') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label for="email">Email address</label>
+    <input
+      id="email"
+      name="email"
+      type="email"
+      autocomplete="email"
+      maxlength="254"
+      placeholder="you@example.com"
+      required
+    >
+
+    <label for="password">Password</label>
+    <input
+      id="password"
+      name="password"
+      type="password"
+      autocomplete="new-password"
+      minlength="12"
+      maxlength="128"
+      placeholder="At least 12 characters"
+      required
+    >
+    <p class="field-hint">Use at least 12 characters.</p>
+
+    <label for="confirm-password">Confirm password</label>
+    <input
+      id="confirm-password"
+      name="confirm_password"
+      type="password"
+      autocomplete="new-password"
+      minlength="12"
+      maxlength="128"
+      placeholder="Enter your password again"
+      required
+    >
+
+    <button class="auth-submit" type="submit">
+      Create account <span aria-hidden="true">→</span>
+    </button>
+  </form>
+
+  <p class="auth-switch">
+    Already have an account? <a href="{{ url_for('login') }}">Log in</a>
+  </p>
+{% endblock %}

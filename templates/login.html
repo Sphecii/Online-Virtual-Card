@@ -1,0 +1,43 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Log in — AliasCard{% endblock %}
+
+{% block auth_content %}
+  <p class="auth-eyebrow">Welcome back</p>
+  <h1 id="auth-title">Log in to AliasCard</h1>
+  <p class="auth-intro">Your secure space for more private payments.</p>
+
+  <form class="auth-form" method="post" action="{{ url_for('login') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label for="email">Email address</label>
+    <input
+      id="email"
+      name="email"
+      type="email"
+      autocomplete="email"
+      maxlength="254"
+      placeholder="you@example.com"
+      required
+    >
+
+    <label for="password">Password</label>
+    <input
+      id="password"
+      name="password"
+      type="password"
+      autocomplete="current-password"
+      maxlength="128"
+      placeholder="Enter your password"
+      required
+    >
+
+    <button class="auth-submit" type="submit">
+      Log in securely <span aria-hidden="true">→</span>
+    </button>
+  </form>
+
+  <p class="auth-switch">
+    New to AliasCard? <a href="{{ url_for('register') }}">Create an account</a>
+  </p>
+{% endblock %}

@@ -66,6 +66,34 @@ button {
   transform: translateX(4px);
 }
 
+.site-flash-list {
+  position: absolute;
+  z-index: 8;
+  top: 54px;
+  right: 20px;
+  width: min(360px, calc(100% - 40px));
+}
+
+.site-flash {
+  margin: 8px 0;
+  padding: 12px 15px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(20, 25, 20, 0.12);
+  font-size: 13px;
+}
+
+.site-flash--error {
+  border-color: #eccaca;
+  color: #872d2d;
+}
+
+.site-flash--success {
+  border-color: #cce6c0;
+  color: #355f2c;
+}
+
 .site-header {
   height: 78px;
   padding: 0 clamp(24px, 4.2vw, 72px);
@@ -78,13 +106,14 @@ button {
 
 .wordmark {
   width: fit-content;
-  padding: 4px 7px 3px;
+  padding: 5px 8px;
   background: #222225;
   color: #fff;
-  font-size: 17px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 750;
   line-height: 1;
-  letter-spacing: 0.08em;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
 }
 
 .primary-navigation {
@@ -125,6 +154,16 @@ button {
   transform: translateY(4px) rotate(225deg);
 }
 
+.nav-item--cards .nav-dropdown-toggle {
+  padding: 10px 14px;
+  border-radius: 999px;
+}
+
+.nav-item--cards.is-open .nav-dropdown-toggle {
+  background: #edf6e6;
+  color: var(--accent-ink);
+}
+
 .dropdown-panel {
   position: absolute;
   z-index: 5;
@@ -147,6 +186,21 @@ button {
   left: auto;
 }
 
+.dropdown-panel--cards {
+  top: calc(100% + 2px);
+  left: 0;
+  width: 292px;
+  padding: 22px 18px 13px;
+  border-radius: 17px;
+}
+
+.dropdown-heading {
+  margin: 0 0 9px 32px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 550;
+}
+
 .nav-item.is-open .dropdown-panel {
   opacity: 1;
   visibility: visible;
@@ -165,10 +219,41 @@ button {
   background: #f1f8eb;
 }
 
+.dropdown-panel .dropdown-feature {
+  min-height: 59px;
+  padding: 10px 6px 10px 32px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px dashed var(--line);
+  border-radius: 0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dropdown-panel .dropdown-feature:hover {
+  background: #f6faf2;
+}
+
+.dropdown-feature__icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
 .header-actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+
+.header-logout-form {
+  margin: 0;
 }
 
 .button {
@@ -375,9 +460,9 @@ button {
 }
 
 .payment-card__brand {
-  font-size: 23px;
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: -0.07em;
+  letter-spacing: -0.055em;
 }
 
 .payment-card__signal {
@@ -855,6 +940,19 @@ button {
 
   .dropdown-panel a {
     padding: 10px 14px;
+  }
+
+  .dropdown-panel--cards {
+    padding: 10px 4px 7px;
+  }
+
+  .dropdown-panel .dropdown-feature {
+    min-height: 48px;
+    padding: 9px 10px;
+  }
+
+  .dropdown-heading {
+    margin-left: 10px;
   }
 
   .hero {

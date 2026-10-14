@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#111918">
+    <meta name="description" content="Secure access to your AliasCard account.">
+    <title>{% block title %}AliasCard{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+  </head>
+  <body class="auth-page">
+    <div class="auth-glow auth-glow--one" aria-hidden="true"></div>
+    <div class="auth-glow auth-glow--two" aria-hidden="true"></div>
+
+    <header class="auth-header">
+      <a class="auth-wordmark" href="{{ url_for('home') }}" aria-label="AliasCard home">
+        <span class="auth-wordmark__mark" aria-hidden="true">A</span>
+        <span>AliasCard</span>
+      </a>
+      <a class="auth-back-link" href="{{ url_for('home') }}">
+        <span aria-hidden="true">←</span> Back to website
+      </a>
+    </header>
+
+    <main class="auth-main">
+      <section class="auth-card" aria-labelledby="auth-title">
+        <div class="auth-emblem" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12 3 19 6v5c0 4.5-2.9 8-7 10-4.1-2-7-5.5-7-10V6l7-3Z"></path>
+            <path d="m9 12 2 2 4-4"></path>
+          </svg>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-list" role="status" aria-live="polite">
+              {% for category, message in messages %}
+                <p class="flash-message flash-message--{{ category }}">{{ message }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        {% block auth_content %}{% endblock %}
+      </section>
+      <p class="auth-security-note">
+        <span aria-hidden="true">⌑</span> Your account is protected with secure, encrypted sign-in.
+      </p>
+    </main>
+
+    <footer class="auth-footer">
+      <span>© 2025 AliasCard</span>
+      <span>Privacy-minded payments, by design.</span>
+    </footer>
+  </body>
+</html>

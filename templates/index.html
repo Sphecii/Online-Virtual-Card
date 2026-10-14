@@ -8,18 +8,28 @@
       name="description"
       content="A calmer, more private way to pay online. Create virtual cards and stay in control of every subscription."
     >
-    <title>Privacy — A better way to pay online</title>
+    <title>AliasCard — A better way to pay online</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
   </head>
   <body>
-    <a class="announcement" href="#get-started">
+    <a class="announcement" href="{{ url_for('register') }}">
       <span>Secure payments for you and your <span class="announcement__accent">AI agents</span></span>
       <span class="announcement__arrow" aria-hidden="true">→</span>
     </a>
 
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="site-flash-list" role="status" aria-live="polite">
+          {% for category, message in messages %}
+            <p class="site-flash site-flash--{{ category }}">{{ message }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
     <header class="site-header">
-      <a class="wordmark" href="#" aria-label="Privacy home">PRIVACY</a>
+      <a class="wordmark" href="{{ url_for('home') }}" aria-label="AliasCard home">AliasCard</a>
 
       <button
         class="mobile-menu-toggle"
@@ -33,14 +43,26 @@
       </button>
 
       <nav class="primary-navigation" id="primary-navigation" aria-label="Main navigation">
-        <div class="nav-item">
+        <div class="nav-item nav-item--cards">
           <button class="nav-link nav-dropdown-toggle" type="button" aria-expanded="false">
             Pay with Virtual Cards <span class="chevron" aria-hidden="true"></span>
           </button>
-          <div class="dropdown-panel">
-            <a href="#virtual-cards">Virtual cards</a>
-            <a href="#subscriptions">Subscription control</a>
-            <a href="#security">Payment privacy</a>
+          <div class="dropdown-panel dropdown-panel--cards">
+            <p class="dropdown-heading">Virtual Cards</p>
+            <a class="dropdown-feature" href="#how-it-works">
+              <svg class="dropdown-feature__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="3.5" y="5.5" width="16" height="13" rx="2.5"></rect>
+                <path d="M3.5 9h12M15 14l2-2 2 2M17 12v5"></path>
+              </svg>
+              <span>Single-Use Cards</span>
+            </a>
+            <a class="dropdown-feature" href="#subscriptions">
+              <svg class="dropdown-feature__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="3.5" y="5.5" width="15" height="13" rx="2.5"></rect>
+                <path d="M3.5 9h12M15 15v-1.5a2.5 2.5 0 0 1 5 0V15m-6 0h7v5h-7z"></path>
+              </svg>
+              <span>Merchant-Locked Cards</span>
+            </a>
           </div>
         </div>
 
@@ -62,15 +84,23 @@
             Company <span class="chevron" aria-hidden="true"></span>
           </button>
           <div class="dropdown-panel dropdown-panel--right">
-            <a href="#about">About Privacy</a>
-            <a href="mailto:hello@privacy.example">Contact us</a>
+            <a href="#about">About AliasCard</a>
+            <a href="mailto:hello@aliascard.example">Contact us</a>
           </div>
         </div>
       </nav>
 
       <div class="header-actions">
-        <a class="button button--dark button--small" href="#get-started">Log in</a>
-        <a class="button button--primary button--small" href="#get-started">Sign up</a>
+        {% if current_user %}
+          <a class="button button--dark button--small" href="{{ url_for('dashboard') }}">Dashboard</a>
+          <form class="header-logout-form" method="post" action="{{ url_for('logout') }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <button class="button button--primary button--small" type="submit">Log out</button>
+          </form>
+        {% else %}
+          <a class="button button--dark button--small" href="{{ url_for('login') }}">Log in</a>
+          <a class="button button--primary button--small" href="{{ url_for('register') }}">Sign up</a>
+        {% endif %}
       </div>
     </header>
 
@@ -86,7 +116,7 @@
             Shop online without sharing your real card details.<br class="desktop-break">
             Create a virtual card in seconds. Stay in control.
           </p>
-          <a class="button button--primary button--hero" href="#get-started">
+          <a class="button button--primary button--hero" href="{{ url_for('register') }}">
             Get started for free <span aria-hidden="true">→</span>
           </a>
           <p class="hero__note">No monthly fee. No stress. Just smarter spending.</p>
@@ -99,7 +129,7 @@
           <div class="sparkle sparkle--two" aria-hidden="true">✦</div>
           <div class="payment-card">
             <div class="payment-card__top">
-              <span class="payment-card__brand">privacy</span>
+              <span class="payment-card__brand">AliasCard</span>
               <span class="payment-card__signal" aria-hidden="true">◉</span>
             </div>
             <div class="payment-card__chip" aria-hidden="true">
@@ -149,17 +179,17 @@
         <p class="eyebrow">Take back control</p>
         <h2>A little more privacy looks good on you.</h2>
         <p>Explore a simpler, more thoughtful way to pay online.</p>
-        <a class="button button--primary" href="mailto:hello@privacy.example?subject=Getting%20started">
-          Get in touch <span aria-hidden="true">→</span>
+        <a class="button button--primary" href="{{ url_for('register') }}">
+          Create your account <span aria-hidden="true">→</span>
         </a>
         <p class="closing-cta__fine-print" id="pricing">Pricing and availability may vary.</p>
       </section>
     </main>
 
     <footer class="site-footer" id="about">
-      <a class="wordmark" href="#" aria-label="Privacy home">PRIVACY</a>
+      <a class="wordmark" href="{{ url_for('home') }}" aria-label="AliasCard home">AliasCard</a>
       <span>More peace of mind, every time you pay.</span>
-      <span>© 2025 Privacy</span>
+      <span>© 2025 AliasCard</span>
     </footer>
 
     <aside class="support">
@@ -168,7 +198,7 @@
           <span class="support-panel__icon" aria-hidden="true">?</span>
           <div><strong>How can we help?</strong><small>We'd love to hear from you.</small></div>
         </div>
-        <a href="mailto:support@privacy.example">Email our support team <span aria-hidden="true">→</span></a>
+        <a href="mailto:support@aliascard.example">Email our support team <span aria-hidden="true">→</span></a>
       </div>
       <button
         class="support-button"
