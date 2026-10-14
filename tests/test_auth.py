@@ -190,6 +190,26 @@ class AuthenticationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["Location"], "/login")
 
+    def test_virtual_cards_redirects_signed_out_user_to_login(self):
+        response = self.client.get("/virtual-cards")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/login")
+
+    def test_virtual_cards_redirects_signed_in_user_to_dashboard_cards(self):
+        self.register()
+
+        response = self.client.get("/virtual-cards")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/dashboard#your-cards")
+
+    def test_home_virtual_card_options_use_protected_route(self):
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data.count(b'href="/virtual-cards"'), 2)
+
     def test_post_without_csrf_token_is_rejected(self):
         response = self.client.post(
             "/register",

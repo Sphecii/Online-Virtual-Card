@@ -206,6 +206,11 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     def dashboard():
         return render_template("dashboard.html", user=g.current_user)
 
+    @app.get("/virtual-cards")
+    @login_required
+    def virtual_cards():
+        return redirect(url_for("dashboard", _anchor="your-cards"))
+
     with app.app_context():
         db.create_all()
 

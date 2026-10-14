@@ -49,14 +49,14 @@
           </button>
           <div class="dropdown-panel dropdown-panel--cards">
             <p class="dropdown-heading">Virtual Cards</p>
-            <a class="dropdown-feature" href="#how-it-works">
+            <a class="dropdown-feature" href="{{ url_for('virtual_cards') }}">
               <svg class="dropdown-feature__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <rect x="3.5" y="5.5" width="16" height="13" rx="2.5"></rect>
                 <path d="M3.5 9h12M15 14l2-2 2 2M17 12v5"></path>
               </svg>
               <span>Single-Use Cards</span>
             </a>
-            <a class="dropdown-feature" href="#subscriptions">
+            <a class="dropdown-feature" href="{{ url_for('virtual_cards') }}">
               <svg class="dropdown-feature__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <rect x="3.5" y="5.5" width="15" height="13" rx="2.5"></rect>
                 <path d="M3.5 9h12M15 15v-1.5a2.5 2.5 0 0 1 5 0V15m-6 0h7v5h-7z"></path>
