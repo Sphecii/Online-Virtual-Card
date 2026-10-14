@@ -32,9 +32,10 @@ Python 3.10 or newer is required.
 4. In the Stripe Dashboard, obtain a secret API key and configure a webhook for
    `checkout.session.completed` and `checkout.session.async_payment_succeeded`
    pointing to `https://your-domain/stripe/webhook`. Copy the API secret key to
-   `STRIPE_SECRET_KEY` and the webhook signing secret to `STRIPE_WEBHOOK_SECRET`
-   in `.env`. Use Stripe test keys and a local Stripe CLI webhook forwarder while
-   developing. Never commit these values.
+   `STRIPE_SECRET_KEY`, the publishable key to `STRIPE_PUBLISHABLE_KEY`, and the
+   webhook signing secret to `STRIPE_WEBHOOK_SECRET` in `.env`. Use Stripe test
+   keys and a local Stripe CLI webhook forwarder while developing. Never commit
+   these values.
 
 5. Start the app:
 
@@ -55,6 +56,8 @@ The authenticated **Wallet** workspace accepts ZAR top-ups from R10.00 to
 R10,000.00 through Stripe Checkout. Checkout accepts card payments and can show
 Apple Pay or Google Pay when Stripe, the visitor's device/browser, and region
 support them. Card details are collected by Stripe, not AliasCard.
+Customers enter their card details on an AliasCard-branded page that embeds
+Stripe Checkout; card data is handled directly by Stripe's secure payment UI.
 
 The wallet balance changes only after the app verifies Stripe's webhook
 signature and confirms the paid Checkout Session matches the user's pending

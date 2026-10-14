@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="description" content="Securely complete your AliasCard wallet top-up.">
+    <title>Secure checkout — AliasCard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <script src="https://js.stripe.com/v3/"></script>
+  </head>
+  <body class="dashboard-page">
+    <main class="wallet-checkout-main">
+      <a class="dashboard-brand wallet-checkout-brand" href="{{ url_for('wallet') }}">
+        <span class="dashboard-brand__mark" aria-hidden="true">A</span>
+        <span>AliasCard</span>
+      </a>
+
+      <section class="panel wallet-checkout-panel" aria-labelledby="checkout-title">
+        <a class="wallet-back-link" href="{{ url_for('wallet') }}">← Back to wallet</a>
+        <p class="section-kicker">SECURE CHECKOUT</p>
+        <h1 id="checkout-title">Add funds to your wallet</h1>
+        <div class="wallet-checkout-amount">
+          <span>Wallet top-up</span>
+          <strong>{{ currency }} {{ amount }}</strong>
+        </div>
+
+        <div id="embedded-checkout" aria-label="Secure payment form"></div>
+        <p id="checkout-status" class="wallet-checkout-status" role="status" aria-live="polite">
+          Loading secure payment form…
+        </p>
+        <p class="wallet-checkout-note">
+          Your payment details are encrypted and processed directly by Stripe.
+          AliasCard does not receive or store your card number.
+        </p>
+      </section>
+    </main>
+    <script>
+      (async () => {
+        const status = document.getElementById("checkout-status");
+        try {
+          const stripe = Stripe({{ publishable_key|tojson }});
+          const checkout = await stripe.initEmbeddedCheckout({
+            clientSecret: {{ client_secret|tojson }}
+          });
+          checkout.mount("#embedded-checkout");
+          status.hidden = true;
+        } catch (error) {
+          status.textContent = "The secure payment form could not be loaded. Please return to your wallet and try again.";
+          status.classList.add("wallet-checkout-status--error");
+        }
+      })();
+    </script>
+  </body>
+</html>

@@ -59,6 +59,15 @@ class WalletTopUp(db.Model):
     credited_at = db.Column(db.DateTime(timezone=True))
 
 
+class WalletCheckout(db.Model):
+    top_up_id = db.Column(
+        db.Integer,
+        db.ForeignKey("wallet_top_up.id"),
+        primary_key=True,
+    )
+    client_secret = db.Column(db.Text, nullable=False)
+
+
 def _csrf_token() -> str:
     token = session.get("_csrf_token")
     if token is None:
@@ -106,6 +115,7 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             "DATABASE_URL", "sqlite:///aliascard.db"
         ),
         STRIPE_SECRET_KEY=os.environ.get("STRIPE_SECRET_KEY", ""),
+        STRIPE_PUBLISHABLE_KEY=os.environ.get("STRIPE_PUBLISHABLE_KEY", ""),
         STRIPE_WEBHOOK_SECRET=os.environ.get("STRIPE_WEBHOOK_SECRET", ""),
         WALLET_CURRENCY="zar",
         WALLET_MIN_TOP_UP_MINOR=1000,
@@ -262,6 +272,7 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             top_ups=top_ups,
             stripe_configured=bool(
                 app.config["STRIPE_SECRET_KEY"]
+                and app.config["STRIPE_PUBLISHABLE_KEY"]
                 and app.config["STRIPE_WEBHOOK_SECRET"]
             ),
         )
@@ -292,6 +303,7 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             return redirect(url_for("wallet"))
         if not (
             app.config["STRIPE_SECRET_KEY"]
+            and app.config["STRIPE_PUBLISHABLE_KEY"]
             and app.config["STRIPE_WEBHOOK_SECRET"]
         ):
             flash(
@@ -313,6 +325,7 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             checkout_session = stripe_client.v1.checkout.sessions.create(
                 {
                     "mode": "payment",
+                    "ui_mode": "embedded",
                     "payment_method_types": ["card"],
                     "line_items": [
                         {
@@ -327,17 +340,11 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
                     "customer_email": g.current_user.email,
                     "client_reference_id": str(g.current_user.id),
                     "metadata": {"wallet_top_up_id": str(top_up.id)},
-                    "success_url": url_for(
-                        "wallet",
-                        checkout="success",
+                    "return_url": url_for(
+                        "wallet_checkout_return",
                         _external=True,
                     )
-                    + "&session_id={CHECKOUT_SESSION_ID}",
-                    "cancel_url": url_for(
-                        "wallet",
-                        checkout="cancelled",
-                        _external=True,
-                    ),
+                    + "?session_id={CHECKOUT_SESSION_ID}",
                 }
             )
         except stripe.StripeError:
@@ -347,9 +354,77 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             flash("We couldn’t start checkout. Please try again.", "error")
             return redirect(url_for("wallet"))
 
+        if not checkout_session.client_secret:
+            db.session.delete(top_up)
+            db.session.commit()
+            logger.error("Stripe returned an embedded checkout without a client secret.")
+            flash("We couldn’t start checkout. Please try again.", "error")
+            return redirect(url_for("wallet"))
+
         top_up.stripe_checkout_session_id = checkout_session.id
+        db.session.add(
+            WalletCheckout(
+                top_up_id=top_up.id,
+                client_secret=checkout_session.client_secret,
+            )
+        )
         db.session.commit()
-        return redirect(checkout_session.url, code=303)
+        session["wallet_checkout_top_up_id"] = top_up.id
+        return redirect(url_for("wallet_checkout"), code=303)
+
+    @app.get("/wallet/checkout")
+    @login_required
+    def wallet_checkout():
+        top_up_id = session.get("wallet_checkout_top_up_id")
+        top_up = db.session.get(WalletTopUp, top_up_id) if isinstance(top_up_id, int) else None
+        checkout = (
+            db.session.get(WalletCheckout, top_up.id)
+            if top_up is not None
+            else None
+        )
+        if (
+            top_up is None
+            or top_up.user_id != g.current_user.id
+            or top_up.status != "pending"
+            or not top_up.stripe_checkout_session_id
+            or checkout is None
+        ):
+            session.pop("wallet_checkout_top_up_id", None)
+            flash("Start a wallet top-up to open checkout.", "error")
+            return redirect(url_for("wallet"))
+
+        return render_template(
+            "wallet_checkout.html",
+            user=g.current_user,
+            top_up=top_up,
+            amount=format(Decimal(top_up.amount_minor) / Decimal(100), ",.2f"),
+            currency=top_up.currency.upper(),
+            client_secret=checkout.client_secret,
+            publishable_key=app.config["STRIPE_PUBLISHABLE_KEY"],
+        )
+
+    @app.get("/wallet/checkout-return")
+    @login_required
+    def wallet_checkout_return():
+        checkout_session_id = request.args.get("session_id", "")
+        top_up = db.session.scalar(
+            db.select(WalletTopUp).where(
+                WalletTopUp.stripe_checkout_session_id == checkout_session_id,
+                WalletTopUp.user_id == g.current_user.id,
+            )
+        )
+        if top_up is None:
+            flash("We couldn’t verify that wallet checkout.", "error")
+        elif top_up.status == "credited":
+            flash("Your wallet top-up has been confirmed.", "success")
+        else:
+            flash(
+                "Checkout returned. Your balance will update once Stripe confirms the payment.",
+                "info",
+            )
+        if session.get("wallet_checkout_top_up_id") == getattr(top_up, "id", None):
+            session.pop("wallet_checkout_top_up_id", None)
+        return redirect(url_for("wallet"))
 
     @app.post("/stripe/webhook")
     def stripe_webhook():
@@ -403,6 +478,9 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         if event.type in failed_event_types:
             if top_up.status == "pending":
                 top_up.status = "failed"
+                checkout = db.session.get(WalletCheckout, top_up.id)
+                if checkout is not None:
+                    db.session.delete(checkout)
                 db.session.commit()
             return "", 200
 
@@ -411,6 +489,9 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             top_up.credited_at = datetime.now(timezone.utc)
             if checkout.payment_intent:
                 top_up.stripe_payment_intent_id = checkout.payment_intent
+            stored_checkout = db.session.get(WalletCheckout, top_up.id)
+            if stored_checkout is not None:
+                db.session.delete(stored_checkout)
             db.session.commit()
         return "", 200
 

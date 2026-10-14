@@ -3,7 +3,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from app import User, WalletTopUp, create_app, db
+from app import User, WalletCheckout, WalletTopUp, create_app, db
 from werkzeug.security import check_password_hash
 
 
@@ -15,6 +15,7 @@ class AuthenticationTests(unittest.TestCase):
                 "SECRET_KEY": "test-secret-key",
                 "SQLALCHEMY_DATABASE_URI": "sqlite://",
                 "STRIPE_SECRET_KEY": "sk_test_aliascard",
+                "STRIPE_PUBLISHABLE_KEY": "pk_test_aliascard",
                 "STRIPE_WEBHOOK_SECRET": "whsec_aliascard",
             }
         )
@@ -235,7 +236,10 @@ class AuthenticationTests(unittest.TestCase):
 
     def test_wallet_top_up_creates_stripe_checkout_without_crediting_balance(self):
         self.register()
-        checkout = SimpleNamespace(id="cs_test_aliascard", url="https://checkout.example")
+        checkout = SimpleNamespace(
+            id="cs_test_aliascard",
+            client_secret="cs_test_aliascard_secret_test",
+        )
         with patch("app.stripe.StripeClient") as client_factory:
             stripe_client = client_factory.return_value
             stripe_client.v1.checkout.sessions.create.return_value = checkout
@@ -246,19 +250,69 @@ class AuthenticationTests(unittest.TestCase):
             )
 
         self.assertEqual(response.status_code, 303)
-        self.assertEqual(response.headers["Location"], checkout.url)
+        self.assertEqual(response.headers["Location"], "/wallet/checkout")
         client_factory.assert_called_once_with("sk_test_aliascard")
         checkout_args = stripe_client.v1.checkout.sessions.create.call_args.args[0]
+        self.assertEqual(checkout_args["ui_mode"], "embedded")
         self.assertEqual(checkout_args["payment_method_types"], ["card"])
+        self.assertIn("{CHECKOUT_SESSION_ID}", checkout_args["return_url"])
         self.assertEqual(checkout_args["line_items"][0]["price_data"]["currency"], "zar")
         self.assertEqual(checkout_args["line_items"][0]["price_data"]["unit_amount"], 25000)
         with self.app.app_context():
             top_up = db.session.scalar(db.select(WalletTopUp))
             self.assertEqual(top_up.status, "pending")
             self.assertEqual(top_up.amount_minor, 25000)
+            checkout_record = db.session.get(WalletCheckout, top_up.id)
+            self.assertEqual(
+                checkout_record.client_secret,
+                "cs_test_aliascard_secret_test",
+            )
+        with self.client.session_transaction() as session:
+            self.assertNotIn("wallet_checkout_client_secret", session)
+
+        checkout_page = self.client.get("/wallet/checkout")
+        self.assertEqual(checkout_page.status_code, 200)
+        self.assertIn(b"Secure checkout", checkout_page.data)
+        self.assertIn(b"Stripe(", checkout_page.data)
+        self.assertIn(b"initEmbeddedCheckout", checkout_page.data)
+        self.assertIn(b"pk_test_aliascard", checkout_page.data)
+        self.assertIn(b"cs_test_aliascard_secret_test", checkout_page.data)
 
         wallet = self.client.get("/wallet")
         self.assertIn(b"ZAR 0.00", wallet.data)
+
+    def test_wallet_checkout_requires_login_and_valid_pending_top_up(self):
+        response = self.client.get("/wallet/checkout")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/login")
+
+        self.register()
+        response = self.client.get("/wallet/checkout", follow_redirects=True)
+        self.assertIn(b"Start a wallet top-up to open checkout.", response.data)
+
+    def test_wallet_checkout_return_does_not_credit_payment_without_webhook(self):
+        self.register()
+        checkout = SimpleNamespace(
+            id="cs_test_aliascard",
+            client_secret="cs_test_aliascard_secret_test",
+        )
+        with patch("app.stripe.StripeClient") as client_factory:
+            client_factory.return_value.v1.checkout.sessions.create.return_value = checkout
+            token = self.csrf_token("/wallet")
+            self.client.post(
+                "/wallet/top-up",
+                data={"_csrf_token": token, "amount": "250.00"},
+            )
+
+        response = self.client.get(
+            "/wallet/checkout-return?session_id=cs_test_aliascard",
+            follow_redirects=True,
+        )
+        self.assertIn(
+            b"Your balance will update once Stripe confirms the payment.",
+            response.data,
+        )
+        self.assertIn(b"ZAR 0.00", response.data)
 
     def test_wallet_rejects_top_ups_outside_configured_amount_limits(self):
         self.register()
@@ -296,6 +350,21 @@ class AuthenticationTests(unittest.TestCase):
                 db.session.scalar(db.select(db.func.count(WalletTopUp.id))), 0
             )
 
+    def test_wallet_top_ups_stay_disabled_without_publishable_key(self):
+        self.register()
+        self.app.config["STRIPE_PUBLISHABLE_KEY"] = ""
+
+        wallet = self.client.get("/wallet")
+        self.assertIn(b"Secure checkout is being set up.", wallet.data)
+
+        token = self.csrf_token("/wallet")
+        response = self.client.post(
+            "/wallet/top-up",
+            data={"_csrf_token": token, "amount": "250.00"},
+            follow_redirects=True,
+        )
+        self.assertIn(b"Wallet top-ups are not available yet.", response.data)
+
     def test_invalid_stripe_webhook_signature_is_rejected(self):
         response = self.client.post(
             "/stripe/webhook",
@@ -308,7 +377,10 @@ class AuthenticationTests(unittest.TestCase):
 
     def test_signed_paid_webhook_credits_wallet_once(self):
         self.register()
-        checkout = SimpleNamespace(id="cs_test_aliascard", url="https://checkout.example")
+        checkout = SimpleNamespace(
+            id="cs_test_aliascard",
+            client_secret="cs_test_aliascard_secret_test",
+        )
         with patch("app.stripe.StripeClient") as client_factory:
             client_factory.return_value.v1.checkout.sessions.create.return_value = checkout
             token = self.csrf_token("/wallet")
@@ -354,6 +426,7 @@ class AuthenticationTests(unittest.TestCase):
             top_up = db.session.scalar(db.select(WalletTopUp))
             self.assertEqual(top_up.status, "credited")
             self.assertEqual(top_up.stripe_payment_intent_id, "pi_test_aliascard")
+            self.assertIsNone(db.session.get(WalletCheckout, top_up.id))
             credited_total = db.session.scalar(
                 db.select(db.func.sum(WalletTopUp.amount_minor)).where(
                     WalletTopUp.status == "credited"
@@ -365,7 +438,10 @@ class AuthenticationTests(unittest.TestCase):
 
     def test_webhook_does_not_credit_mismatched_payment(self):
         self.register()
-        checkout = SimpleNamespace(id="cs_test_aliascard", url="https://checkout.example")
+        checkout = SimpleNamespace(
+            id="cs_test_aliascard",
+            client_secret="cs_test_aliascard_secret_test",
+        )
         with patch("app.stripe.StripeClient") as client_factory:
             client_factory.return_value.v1.checkout.sessions.create.return_value = checkout
             token = self.csrf_token("/wallet")

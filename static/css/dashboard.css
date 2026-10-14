@@ -1146,6 +1146,85 @@ button {
   font-size: 10px;
 }
 
+.wallet-checkout-main {
+  width: min(100% - 36px, 620px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: clamp(28px, 7vh, 64px) 0;
+}
+
+.wallet-checkout-brand {
+  margin: 0 0 28px;
+}
+
+.wallet-checkout-panel {
+  padding: clamp(22px, 5vw, 36px);
+}
+
+.wallet-back-link {
+  margin-bottom: 27px;
+  display: inline-flex;
+  color: #626f62;
+  font-size: 12px;
+}
+
+.wallet-checkout-panel > .section-kicker {
+  margin-bottom: 8px;
+  color: var(--dashboard-green);
+}
+
+.wallet-checkout-panel h1 {
+  margin: 0;
+  font-size: clamp(22px, 5vw, 29px);
+  font-weight: 660;
+  letter-spacing: -0.05em;
+}
+
+.wallet-checkout-amount {
+  margin: 22px 0;
+  padding: 15px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--dashboard-border);
+  border-bottom: 1px solid var(--dashboard-border);
+}
+
+.wallet-checkout-amount span {
+  color: #626f62;
+  font-size: 12px;
+}
+
+.wallet-checkout-amount strong {
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.wallet-checkout-status {
+  min-height: 22px;
+  margin: 14px 0 0;
+  color: var(--dashboard-muted);
+  font-size: 11px;
+}
+
+.wallet-checkout-status[hidden] {
+  display: none;
+}
+
+.wallet-checkout-status--error {
+  color: #872d2d;
+}
+
+.wallet-checkout-note {
+  margin: 18px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--dashboard-border);
+  color: var(--dashboard-muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
 :focus-visible {
   outline: 3px solid rgba(71, 124, 57, 0.45);
   outline-offset: 3px;
