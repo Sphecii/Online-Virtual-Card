@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#ffffff">
+    <meta
+      name="description"
+      content="A calmer, more private way to pay online. Create virtual cards and stay in control of every subscription."
+    >
+    <title>Privacy — A better way to pay online</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+  </head>
+  <body>
+    <a class="announcement" href="#get-started">
+      <span>Secure payments for you and your <span class="announcement__accent">AI agents</span></span>
+      <span class="announcement__arrow" aria-hidden="true">→</span>
+    </a>
+
+    <header class="site-header">
+      <a class="wordmark" href="#" aria-label="Privacy home">PRIVACY</a>
+
+      <button
+        class="mobile-menu-toggle"
+        type="button"
+        aria-label="Open navigation menu"
+        aria-expanded="false"
+        aria-controls="primary-navigation"
+      >
+        <span></span>
+        <span></span>
+      </button>
+
+      <nav class="primary-navigation" id="primary-navigation" aria-label="Main navigation">
+        <div class="nav-item">
+          <button class="nav-link nav-dropdown-toggle" type="button" aria-expanded="false">
+            Pay with Virtual Cards <span class="chevron" aria-hidden="true"></span>
+          </button>
+          <div class="dropdown-panel">
+            <a href="#virtual-cards">Virtual cards</a>
+            <a href="#subscriptions">Subscription control</a>
+            <a href="#security">Payment privacy</a>
+          </div>
+        </div>
+
+        <div class="nav-item">
+          <button class="nav-link nav-dropdown-toggle" type="button" aria-expanded="false">
+            Resources <span class="chevron" aria-hidden="true"></span>
+          </button>
+          <div class="dropdown-panel">
+            <a href="#how-it-works">How it works</a>
+            <a href="#security">Your security</a>
+            <a href="#support">Get help</a>
+          </div>
+        </div>
+
+        <a class="nav-link" href="#pricing">Pricing</a>
+
+        <div class="nav-item">
+          <button class="nav-link nav-dropdown-toggle" type="button" aria-expanded="false">
+            Company <span class="chevron" aria-hidden="true"></span>
+          </button>
+          <div class="dropdown-panel dropdown-panel--right">
+            <a href="#about">About Privacy</a>
+            <a href="mailto:hello@privacy.example">Contact us</a>
+          </div>
+        </div>
+      </nav>
+
+      <div class="header-actions">
+        <a class="button button--dark button--small" href="#get-started">Log in</a>
+        <a class="button button--primary button--small" href="#get-started">Sign up</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero__content">
+          <p class="eyebrow">A little more peace of mind</p>
+          <h1 id="hero-title">
+            <span><span class="text-accent">Privacy</span> and <span class="text-accent">security</span></span>
+            <span>built into your payments</span>
+          </h1>
+          <p class="hero__description">
+            Shop online without sharing your real card details.<br class="desktop-break">
+            Create a virtual card in seconds. Stay in control.
+          </p>
+          <a class="button button--primary button--hero" href="#get-started">
+            Get started for free <span aria-hidden="true">→</span>
+          </a>
+          <p class="hero__note">No monthly fee. No stress. Just smarter spending.</p>
+        </div>
+
+        <div class="hero__visual" aria-label="Illustration of a secure virtual payment card" role="img">
+          <div class="orbit orbit--outer"></div>
+          <div class="orbit orbit--inner"></div>
+          <div class="sparkle sparkle--one" aria-hidden="true">✳</div>
+          <div class="sparkle sparkle--two" aria-hidden="true">✦</div>
+          <div class="payment-card">
+            <div class="payment-card__top">
+              <span class="payment-card__brand">privacy</span>
+              <span class="payment-card__signal" aria-hidden="true">◉</span>
+            </div>
+            <div class="payment-card__chip" aria-hidden="true">
+              <span></span><span></span><span></span><span></span>
+            </div>
+            <div class="payment-card__bottom">
+              <span>•••• &nbsp;•••• &nbsp;•••• &nbsp;4829</span>
+              <span class="payment-card__visa">VISA</span>
+            </div>
+          </div>
+          <div class="secure-badge"><span aria-hidden="true">✓</span> Your details stay yours</div>
+          <div class="floating-label floating-label--left">
+            <span class="floating-label__icon" aria-hidden="true">↗</span>
+            <span><strong>You're in control</strong><small>Pause your card anytime</small></span>
+          </div>
+          <div class="floating-label floating-label--right">
+            <span class="floating-label__icon floating-label__icon--green" aria-hidden="true">✓</span>
+            <span><strong>Payment protected</strong><small>Your real card stays private</small></span>
+          </div>
+        </div>
+
+        <div class="social-proof" aria-label="Rated five out of five by happy shoppers">
+          <span class="social-proof__stars" aria-hidden="true">★★★★★</span>
+          <span><strong>Loved by online shoppers</strong><small>A better way to shop starts here.</small></span>
+        </div>
+      </section>
+
+      <section class="benefits" id="virtual-cards" aria-label="Virtual card benefits">
+        <article class="benefit" id="security">
+          <span class="benefit__icon" aria-hidden="true">⌑</span>
+          <h2>Your card. Your privacy.</h2>
+          <p>Pay online with virtual card details instead of sharing your everyday card number.</p>
+        </article>
+        <article class="benefit" id="subscriptions">
+          <span class="benefit__icon" aria-hidden="true">⏱</span>
+          <h2>Subscriptions, on your terms.</h2>
+          <p>Keep recurring payments organized and pause a virtual card whenever you need to.</p>
+        </article>
+        <article class="benefit" id="how-it-works">
+          <span class="benefit__icon" aria-hidden="true">✳</span>
+          <h2>Ready in a few taps.</h2>
+          <p>Create a card for an online purchase and get back to what you were doing.</p>
+        </article>
+      </section>
+
+      <section class="closing-cta" id="get-started">
+        <p class="eyebrow">Take back control</p>
+        <h2>A little more privacy looks good on you.</h2>
+        <p>Explore a simpler, more thoughtful way to pay online.</p>
+        <a class="button button--primary" href="mailto:hello@privacy.example?subject=Getting%20started">
+          Get in touch <span aria-hidden="true">→</span>
+        </a>
+        <p class="closing-cta__fine-print" id="pricing">Pricing and availability may vary.</p>
+      </section>
+    </main>
+
+    <footer class="site-footer" id="about">
+      <a class="wordmark" href="#" aria-label="Privacy home">PRIVACY</a>
+      <span>More peace of mind, every time you pay.</span>
+      <span>© 2025 Privacy</span>
+    </footer>
+
+    <aside class="support">
+      <div class="support-panel" id="support-panel" hidden>
+        <div class="support-panel__heading">
+          <span class="support-panel__icon" aria-hidden="true">?</span>
+          <div><strong>How can we help?</strong><small>We'd love to hear from you.</small></div>
+        </div>
+        <a href="mailto:support@privacy.example">Email our support team <span aria-hidden="true">→</span></a>
+      </div>
+      <button
+        class="support-button"
+        type="button"
+        aria-label="Open support"
+        aria-expanded="false"
+        aria-controls="support-panel"
+      >
+        <span class="support-button__icon" aria-hidden="true">?</span>
+        <span>Support</span>
+      </button>
+    </aside>
+  </body>
+</html>
