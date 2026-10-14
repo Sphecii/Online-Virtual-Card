@@ -214,6 +214,9 @@ class AuthenticationTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data.count(b'href="/virtual-cards"'), 2)
+        self.assertNotIn(b"Secure payments for you and your AI agents", response.data)
+        self.assertIn(b"Privacy is crucial", response.data)
+        self.assertNotIn(b">Pricing</a>", response.data)
 
     def test_wallet_requires_login(self):
         response = self.client.get("/wallet")

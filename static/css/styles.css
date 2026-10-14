@@ -53,10 +53,6 @@ button {
   letter-spacing: -0.01em;
 }
 
-.announcement__accent {
-  color: var(--accent);
-}
-
 .announcement__arrow {
   font-size: 19px;
   transition: transform 180ms ease;
