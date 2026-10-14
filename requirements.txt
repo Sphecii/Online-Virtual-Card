@@ -3,3 +3,4 @@ Flask-SQLAlchemy
 cryptography
 requests
 python-dotenv
+stripe>=12.0.0

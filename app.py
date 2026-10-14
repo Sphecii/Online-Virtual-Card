@@ -1,9 +1,11 @@
 import hmac
+import logging
 import os
 import re
 import secrets
 import warnings
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 from functools import wraps
 from pathlib import Path
 from typing import Any
@@ -20,12 +22,14 @@ from flask import (
     url_for,
 )
 from flask_sqlalchemy import SQLAlchemy
+import stripe
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
 
 load_dotenv()
 
 db = SQLAlchemy()
+logger = logging.getLogger(__name__)
 
 
 class User(db.Model):
@@ -37,6 +41,22 @@ class User(db.Model):
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
     )
+
+
+class WalletTopUp(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    amount_minor = db.Column(db.Integer, nullable=False)
+    currency = db.Column(db.String(3), nullable=False, default="zar")
+    status = db.Column(db.String(16), nullable=False, default="pending")
+    stripe_checkout_session_id = db.Column(db.String(255), unique=True)
+    stripe_payment_intent_id = db.Column(db.String(255), unique=True)
+    created_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+    credited_at = db.Column(db.DateTime(timezone=True))
 
 
 def _csrf_token() -> str:
@@ -85,6 +105,11 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         SQLALCHEMY_DATABASE_URI=os.environ.get(
             "DATABASE_URL", "sqlite:///aliascard.db"
         ),
+        STRIPE_SECRET_KEY=os.environ.get("STRIPE_SECRET_KEY", ""),
+        STRIPE_WEBHOOK_SECRET=os.environ.get("STRIPE_WEBHOOK_SECRET", ""),
+        WALLET_CURRENCY="zar",
+        WALLET_MIN_TOP_UP_MINOR=1000,
+        WALLET_MAX_TOP_UP_MINOR=1_000_000,
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
@@ -205,6 +230,189 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     @login_required
     def dashboard():
         return render_template("dashboard.html", user=g.current_user)
+
+    @app.get("/wallet")
+    @login_required
+    def wallet():
+        if request.args.get("checkout") == "success":
+            flash(
+                "Checkout completed. Your balance will update once Stripe confirms the payment.",
+                "info",
+            )
+        elif request.args.get("checkout") == "cancelled":
+            flash("Your top-up was cancelled; no money was added.", "info")
+
+        balance_minor = db.session.scalar(
+            db.select(db.func.coalesce(db.func.sum(WalletTopUp.amount_minor), 0)).where(
+                WalletTopUp.user_id == g.current_user.id,
+                WalletTopUp.status == "credited",
+            )
+        )
+        top_ups = db.session.scalars(
+            db.select(WalletTopUp)
+            .where(WalletTopUp.user_id == g.current_user.id)
+            .order_by(WalletTopUp.created_at.desc())
+            .limit(20)
+        ).all()
+        return render_template(
+            "wallet.html",
+            user=g.current_user,
+            balance=format(Decimal(balance_minor) / Decimal(100), ",.2f"),
+            currency=app.config["WALLET_CURRENCY"].upper(),
+            top_ups=top_ups,
+            stripe_configured=bool(
+                app.config["STRIPE_SECRET_KEY"]
+                and app.config["STRIPE_WEBHOOK_SECRET"]
+            ),
+        )
+
+    @app.post("/wallet/top-up")
+    @login_required
+    def create_wallet_top_up():
+        if not _valid_csrf_token():
+            flash("Your session expired. Please try again.", "error")
+            return redirect(url_for("wallet"))
+
+        amount_text = request.form.get("amount", "").strip()
+        if re.fullmatch(r"\d{1,5}(?:\.\d{1,2})?", amount_text) is None:
+            flash("Enter a top-up between R10.00 and R10,000.00.", "error")
+            return redirect(url_for("wallet"))
+        try:
+            amount = Decimal(amount_text)
+            amount_minor = int(amount * 100)
+        except (InvalidOperation, ValueError):
+            flash("Enter a valid top-up amount.", "error")
+            return redirect(url_for("wallet"))
+
+        if (
+            not app.config["WALLET_MIN_TOP_UP_MINOR"] <= amount_minor
+            <= app.config["WALLET_MAX_TOP_UP_MINOR"]
+        ):
+            flash("Enter a top-up between R10.00 and R10,000.00.", "error")
+            return redirect(url_for("wallet"))
+        if not (
+            app.config["STRIPE_SECRET_KEY"]
+            and app.config["STRIPE_WEBHOOK_SECRET"]
+        ):
+            flash(
+                "Wallet top-ups are not available yet. Please try again later.",
+                "error",
+            )
+            return redirect(url_for("wallet"))
+
+        top_up = WalletTopUp(
+            user_id=g.current_user.id,
+            amount_minor=amount_minor,
+            currency=app.config["WALLET_CURRENCY"],
+        )
+        db.session.add(top_up)
+        db.session.commit()
+
+        try:
+            stripe_client = stripe.StripeClient(app.config["STRIPE_SECRET_KEY"])
+            checkout_session = stripe_client.v1.checkout.sessions.create(
+                {
+                    "mode": "payment",
+                    "payment_method_types": ["card"],
+                    "line_items": [
+                        {
+                            "price_data": {
+                                "currency": top_up.currency,
+                                "product_data": {"name": "AliasCard wallet top-up"},
+                                "unit_amount": top_up.amount_minor,
+                            },
+                            "quantity": 1,
+                        }
+                    ],
+                    "customer_email": g.current_user.email,
+                    "client_reference_id": str(g.current_user.id),
+                    "metadata": {"wallet_top_up_id": str(top_up.id)},
+                    "success_url": url_for(
+                        "wallet",
+                        checkout="success",
+                        _external=True,
+                    )
+                    + "&session_id={CHECKOUT_SESSION_ID}",
+                    "cancel_url": url_for(
+                        "wallet",
+                        checkout="cancelled",
+                        _external=True,
+                    ),
+                }
+            )
+        except stripe.StripeError:
+            db.session.delete(top_up)
+            db.session.commit()
+            logger.exception("Stripe could not create the wallet top-up checkout.")
+            flash("We couldn’t start checkout. Please try again.", "error")
+            return redirect(url_for("wallet"))
+
+        top_up.stripe_checkout_session_id = checkout_session.id
+        db.session.commit()
+        return redirect(checkout_session.url, code=303)
+
+    @app.post("/stripe/webhook")
+    def stripe_webhook():
+        webhook_secret = app.config["STRIPE_WEBHOOK_SECRET"]
+        if not webhook_secret:
+            logger.error("Stripe webhook received without a configured signing secret.")
+            return "", 503
+
+        try:
+            event = stripe.Webhook.construct_event(
+                request.get_data(),
+                request.headers.get("Stripe-Signature", ""),
+                webhook_secret,
+            )
+        except (ValueError, stripe.SignatureVerificationError):
+            logger.warning("Rejected an invalid Stripe webhook.")
+            return "", 400
+
+        paid_event_types = {
+            "checkout.session.completed",
+            "checkout.session.async_payment_succeeded",
+        }
+        failed_event_types = {
+            "checkout.session.async_payment_failed",
+            "checkout.session.expired",
+        }
+        if event.type not in paid_event_types | failed_event_types:
+            return "", 200
+
+        checkout = event.data.object
+        if event.type in paid_event_types and checkout.payment_status != "paid":
+            return "", 200
+
+        metadata = checkout.metadata or {}
+        top_up_id = metadata.get("wallet_top_up_id")
+        try:
+            top_up_id = int(top_up_id)
+        except (TypeError, ValueError):
+            top_up_id = None
+        top_up = db.session.get(WalletTopUp, top_up_id) if top_up_id else None
+        if (
+            top_up is None
+            or top_up.stripe_checkout_session_id != checkout.id
+            or str(top_up.user_id) != str(checkout.client_reference_id)
+            or top_up.amount_minor != checkout.amount_total
+            or top_up.currency != checkout.currency
+        ):
+            logger.error("Stripe wallet payment did not match a pending top-up.")
+            return "", 400
+
+        if event.type in failed_event_types:
+            if top_up.status == "pending":
+                top_up.status = "failed"
+                db.session.commit()
+            return "", 200
+
+        if top_up.status != "credited":
+            top_up.status = "credited"
+            top_up.credited_at = datetime.now(timezone.utc)
+            if checkout.payment_intent:
+                top_up.stripe_payment_intent_id = checkout.payment_intent
+            db.session.commit()
+        return "", 200
 
     @app.get("/virtual-cards")
     @login_required

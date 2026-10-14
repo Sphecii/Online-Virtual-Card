@@ -1,7 +1,9 @@
 import re
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
-from app import User, create_app, db
+from app import User, WalletTopUp, create_app, db
 from werkzeug.security import check_password_hash
 
 
@@ -12,6 +14,8 @@ class AuthenticationTests(unittest.TestCase):
                 "TESTING": True,
                 "SECRET_KEY": "test-secret-key",
                 "SQLALCHEMY_DATABASE_URI": "sqlite://",
+                "STRIPE_SECRET_KEY": "sk_test_aliascard",
+                "STRIPE_WEBHOOK_SECRET": "whsec_aliascard",
             }
         )
         self.client = self.app.test_client()
@@ -209,6 +213,195 @@ class AuthenticationTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data.count(b'href="/virtual-cards"'), 2)
+
+    def test_wallet_requires_login(self):
+        response = self.client.get("/wallet")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/login")
+
+    def test_wallet_renders_zar_balance_top_up_methods_and_workspace_link(self):
+        self.register()
+
+        response = self.client.get("/wallet")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"ZAR 0.00", response.data)
+        self.assertIn(b"Apple Pay", response.data)
+        self.assertIn(b"Google Pay", response.data)
+        self.assertIn(b"Credit or debit card", response.data)
+        dashboard = self.client.get("/dashboard")
+        self.assertIn(b'href="/wallet"', dashboard.data)
+
+    def test_wallet_top_up_creates_stripe_checkout_without_crediting_balance(self):
+        self.register()
+        checkout = SimpleNamespace(id="cs_test_aliascard", url="https://checkout.example")
+        with patch("app.stripe.StripeClient") as client_factory:
+            stripe_client = client_factory.return_value
+            stripe_client.v1.checkout.sessions.create.return_value = checkout
+            token = self.csrf_token("/wallet")
+            response = self.client.post(
+                "/wallet/top-up",
+                data={"_csrf_token": token, "amount": "250.00"},
+            )
+
+        self.assertEqual(response.status_code, 303)
+        self.assertEqual(response.headers["Location"], checkout.url)
+        client_factory.assert_called_once_with("sk_test_aliascard")
+        checkout_args = stripe_client.v1.checkout.sessions.create.call_args.args[0]
+        self.assertEqual(checkout_args["payment_method_types"], ["card"])
+        self.assertEqual(checkout_args["line_items"][0]["price_data"]["currency"], "zar")
+        self.assertEqual(checkout_args["line_items"][0]["price_data"]["unit_amount"], 25000)
+        with self.app.app_context():
+            top_up = db.session.scalar(db.select(WalletTopUp))
+            self.assertEqual(top_up.status, "pending")
+            self.assertEqual(top_up.amount_minor, 25000)
+
+        wallet = self.client.get("/wallet")
+        self.assertIn(b"ZAR 0.00", wallet.data)
+
+    def test_wallet_rejects_top_ups_outside_configured_amount_limits(self):
+        self.register()
+
+        for amount in ("9.99", "10000.01", "1e3", "10.001"):
+            with self.subTest(amount=amount):
+                token = self.csrf_token("/wallet")
+                response = self.client.post(
+                    "/wallet/top-up",
+                    data={"_csrf_token": token, "amount": amount},
+                    follow_redirects=True,
+                )
+                self.assertIn(b"Enter a top-up between R10.00 and R10,000.00.", response.data)
+        with self.app.app_context():
+            self.assertEqual(
+                db.session.scalar(db.select(db.func.count(WalletTopUp.id))), 0
+            )
+
+    def test_wallet_top_ups_stay_disabled_without_webhook_signing_secret(self):
+        self.register()
+        self.app.config["STRIPE_WEBHOOK_SECRET"] = ""
+
+        wallet = self.client.get("/wallet")
+        self.assertIn(b"Secure checkout is being set up.", wallet.data)
+
+        token = self.csrf_token("/wallet")
+        response = self.client.post(
+            "/wallet/top-up",
+            data={"_csrf_token": token, "amount": "250.00"},
+            follow_redirects=True,
+        )
+        self.assertIn(b"Wallet top-ups are not available yet.", response.data)
+        with self.app.app_context():
+            self.assertEqual(
+                db.session.scalar(db.select(db.func.count(WalletTopUp.id))), 0
+            )
+
+    def test_invalid_stripe_webhook_signature_is_rejected(self):
+        response = self.client.post(
+            "/stripe/webhook",
+            data=b"{}",
+            headers={"Stripe-Signature": "invalid"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_signed_paid_webhook_credits_wallet_once(self):
+        self.register()
+        checkout = SimpleNamespace(id="cs_test_aliascard", url="https://checkout.example")
+        with patch("app.stripe.StripeClient") as client_factory:
+            client_factory.return_value.v1.checkout.sessions.create.return_value = checkout
+            token = self.csrf_token("/wallet")
+            self.client.post(
+                "/wallet/top-up",
+                data={"_csrf_token": token, "amount": "250.00"},
+            )
+
+        with self.app.app_context():
+            top_up = db.session.scalar(db.select(WalletTopUp))
+            event = SimpleNamespace(
+                type="checkout.session.completed",
+                data=SimpleNamespace(
+                    object=SimpleNamespace(
+                        id=checkout.id,
+                        payment_status="paid",
+                        metadata={"wallet_top_up_id": str(top_up.id)},
+                        client_reference_id=str(top_up.user_id),
+                        amount_total=25000,
+                        currency="zar",
+                        payment_intent="pi_test_aliascard",
+                    )
+                ),
+            )
+
+        with patch("app.stripe.Webhook.construct_event", return_value=event):
+            response = self.client.post(
+                "/stripe/webhook",
+                data=b"{}",
+                headers={"Stripe-Signature": "test-signature"},
+                content_type="application/json",
+            )
+            duplicate_response = self.client.post(
+                "/stripe/webhook",
+                data=b"{}",
+                headers={"Stripe-Signature": "test-signature"},
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(duplicate_response.status_code, 200)
+        with self.app.app_context():
+            top_up = db.session.scalar(db.select(WalletTopUp))
+            self.assertEqual(top_up.status, "credited")
+            self.assertEqual(top_up.stripe_payment_intent_id, "pi_test_aliascard")
+            credited_total = db.session.scalar(
+                db.select(db.func.sum(WalletTopUp.amount_minor)).where(
+                    WalletTopUp.status == "credited"
+                )
+            )
+            self.assertEqual(credited_total, 25000)
+        wallet = self.client.get("/wallet")
+        self.assertIn(b"ZAR 250.00", wallet.data)
+
+    def test_webhook_does_not_credit_mismatched_payment(self):
+        self.register()
+        checkout = SimpleNamespace(id="cs_test_aliascard", url="https://checkout.example")
+        with patch("app.stripe.StripeClient") as client_factory:
+            client_factory.return_value.v1.checkout.sessions.create.return_value = checkout
+            token = self.csrf_token("/wallet")
+            self.client.post(
+                "/wallet/top-up",
+                data={"_csrf_token": token, "amount": "250.00"},
+            )
+
+        with self.app.app_context():
+            top_up = db.session.scalar(db.select(WalletTopUp))
+            event = SimpleNamespace(
+                type="checkout.session.completed",
+                data=SimpleNamespace(
+                    object=SimpleNamespace(
+                        id=checkout.id,
+                        payment_status="paid",
+                        metadata={"wallet_top_up_id": str(top_up.id)},
+                        client_reference_id=str(top_up.user_id),
+                        amount_total=10000,
+                        currency="zar",
+                        payment_intent="pi_test_aliascard",
+                    )
+                ),
+            )
+        with patch("app.stripe.Webhook.construct_event", return_value=event):
+            response = self.client.post(
+                "/stripe/webhook",
+                data=b"{}",
+                headers={"Stripe-Signature": "test-signature"},
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 400)
+        with self.app.app_context():
+            top_up = db.session.scalar(db.select(WalletTopUp))
+            self.assertEqual(top_up.status, "pending")
 
     def test_post_without_csrf_token_is_rejected(self):
         response = self.client.post(
