@@ -3,15 +3,12 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#111918">
+    <meta name="theme-color" content="#ffffff">
     <meta name="description" content="Secure access to your AliasCard account.">
     <title>{% block title %}AliasCard{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
   </head>
   <body class="auth-page">
-    <div class="auth-glow auth-glow--one" aria-hidden="true"></div>
-    <div class="auth-glow auth-glow--two" aria-hidden="true"></div>
-
     <header class="auth-header">
       <a class="auth-wordmark" href="{{ url_for('home') }}" aria-label="AliasCard home">
         <span class="auth-wordmark__mark" aria-hidden="true">A</span>
